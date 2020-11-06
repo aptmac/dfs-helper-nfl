@@ -6,6 +6,7 @@ import pulp
 from pulp import lpSum
 import sys
 
+print('--- (1/4) Defining the problem ---')
 players = pd.read_csv(sys.argv[1])
 
 players = players.loc[:, ~players.columns.str.contains('^Unnamed')]
@@ -51,6 +52,7 @@ model += objective_function
 total_cost = pulp.LpAffineExpression(cost)
 model += (total_cost <= 200)
 
+print('--- (2/4) Defining the constraints ---')
 QB_constraint = pulp.LpAffineExpression(qb)
 RB_constraint = pulp.LpAffineExpression(rb)
 WR_constraint = pulp.LpAffineExpression(wr)
@@ -65,7 +67,10 @@ model += (TE_constraint == 1)
 model += (DST_constraint == 1)
 model += (total_players == 9)
 
+print('--- (3/4) Solving the problem ---')
 model.solve()
+
+print('--- (4/4) Formatting the results ---')
 players["is_drafted"] = 0.0
 
 for var in model.variables():
@@ -77,3 +82,4 @@ my_team = my_team[["name", "position", "team", "salary", "points"]]
 print(my_team)
 print("Total used amount of salary cap: {}".format(my_team["salary"].sum()))
 print("Projected points: {}".format(my_team["points"].sum().round(1)))
+print('--- Completed ---')

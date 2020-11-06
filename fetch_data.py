@@ -21,6 +21,9 @@ def strip_team_abb(player):
 
 # Download all the positional data from Fantasy Pros
 def download_fp_csv():
+    # Make sure there's a csv folder to store all the data in
+    if not os.path.exists('./csv'):
+        os.makedirs('./csv')
     # Scrape the Fantasy Pros player score predictions and write them to .csv
     fp_base_url = 'https://www.fantasypros.com/nfl/projections/{}.php?scoring=HALF'
     for position in ['qb', 'wr', 'rb', 'te', 'dst']:
@@ -28,7 +31,7 @@ def download_fp_csv():
         soup = BeautifulSoup(html_content, 'lxml')
         table = soup.find('table', id={'data'})
         rows = table.findAll('tr')
-        with open(position+'_fp.csv', 'wt+', newline='') as f:
+        with open('./csv/' + position +'_fp.csv', 'wt+', newline='') as f:
             writer = csv.writer(f)
             header_skipped = False
             for row in rows:
@@ -41,25 +44,31 @@ def download_fp_csv():
                 writer.writerow(csv_row)
 
 def main():
+    print('--- (1/5) Retrieving data from Fantasy Pros ---')
     download_fp_csv()
 
     # retrieve the Yahoo DFS information from API
+    print('--- (2/5) Retrieving data from Yahoo API ---')
     url = "https://dfyql-ro.sports.yahoo.com/v2/external/playersFeed/nfl"
     jsonurl = urlopen(url)
     text = json.loads(jsonurl.read())
 
     # setup a dataframe with Yahoo DFS data and write to json
+    print('--- (3/5) Processing Yahoo data ---')
     yh_df = pandas.DataFrame(text['players']['result'])
     yh_df = yh_df[yh_df.gameStartTime.str.startswith('Sun')] # for simplicity, only consider the main Sunday DFS contests
     yh_df.drop(['sport', 'playerCode', 'gameCode', 'homeTeam', 'awayTeam', 'gameStartTime'], axis=1, inplace=True)
     yh_df['name'] = yh_df['name'].str.strip()
     yh_df.rename(columns = {'fppg':'yahoo'}, inplace=True)
     yh_df.sort_values(by=['salary'], ascending=False, inplace=True)
-    yh_df.rename(columns = {'yahoo':'points'}).to_csv('yahoo.csv', encoding='utf-8', index=True)
-    yh_df.rename(columns = {'yahoo':'points'}).to_json('yahoo.json', orient='table')
+    yh_df.rename(columns = {'yahoo':'points'}).to_csv('./csv/yahoo.csv', encoding='utf-8', index=True)
+    if not os.path.exists('./json'):
+        os.makedirs('./json')
+    yh_df.rename(columns = {'yahoo':'points'}).to_json('./json/yahoo.json', orient='table')
 
     # setup a dataframe with Fantasy Pros positional data
-    fp_df = pandas.concat(map(pandas.read_csv, glob.glob(os.path.join('', '*_fp.csv'))), sort=False)
+    print('--- (4/5) Processing Fantasy Pros data ---')
+    fp_df = pandas.concat(map(pandas.read_csv, glob.glob(os.path.join('', './csv/*_fp.csv'))), sort=False)
     fp_df = fp_df[['Player', 'FPTS']]
     fp_df.columns = ['name', 'points']
     fp_df['name'] = fp_df['name'].str.strip()
@@ -74,8 +83,30 @@ def main():
     merged.sort_values(by=['salary'], ascending=False, inplace=True)
 
     # save Fantasy Pros data with the Yahoo salaries intact
-    merged.to_csv('fantasypros.csv', encoding='utf-8', index=True)
-    merged.to_json('fantasypros.json', orient='table')
+    merged.to_csv('./csv/fantasypros.csv', encoding='utf-8', index=True)
+    merged.to_json('./json/fantasypros.json', orient='table')
+
+    # format the json files to comply nicely with Optaplanner
+    print('--- (5/5) Cleaning up JSON files for OptaPlanner use ---')
+    for format in ['yahoo', 'fantasypros']:
+        f = open('./json/' + format + '.json', 'r')
+        data = json.load(f)
+        f.close()
+
+        # remove the dataframe generate schema
+        del data['schema']
+
+        # add a "roster" section with details about the roster requirements
+        data['roster'] = {'maxSalary' : 200}
+
+        # change the "data" attribute name to "players"
+        data['players'] = data.pop('data')
+
+        # write the files back
+        with open('./json/' + format + '.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+    print('--- Completed ---')
 
 if __name__ == "__main__":
     main()
