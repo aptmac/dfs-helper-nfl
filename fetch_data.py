@@ -6,14 +6,14 @@ import csv
 import glob, os
 import json
 import numpy as np
-import pandas
+import pandas as pd
 import re
 
 # Fantasy Pros player names include the abbreviation of their team; it needs to be removed
 def strip_team_abb(player):
     # For some reason Patrick Mahomes has "II" in FP but not Yahoo, and they must be the same for merging dataframes
-    if player == "Patrick Mahomes II KC":
-        return "Patrick Mahomes"
+    # if player == "Patrick Mahomes II KC":
+    #     return "Patrick Mahomes"
     name = re.findall('(.*)\s[A-Z]{2,3}', player)
     if name:
         return name[0]
@@ -27,21 +27,7 @@ def download_fp_csv():
     # Scrape the Fantasy Pros player score predictions and write them to .csv
     fp_base_url = 'https://www.fantasypros.com/nfl/projections/{}.php?scoring=HALF'
     for position in ['qb', 'wr', 'rb', 'te', 'dst']:
-        html_content = urlopen(fp_base_url.format(position)).read()
-        soup = BeautifulSoup(html_content, 'lxml')
-        table = soup.find('table', id={'data'})
-        rows = table.findAll('tr')
-        with open('./csv/' + position +'_fp.csv', 'wt+', newline='') as f:
-            writer = csv.writer(f)
-            header_skipped = False
-            for row in rows:
-                csv_row = []
-                for cell in row.findAll(['td', 'th']):
-                    csv_row.append(cell.get_text())
-                if header_skipped is False and position != 'dst': # Fantasy Pros tables have an extra row for non-DST
-                    header_skipped = True
-                    continue
-                writer.writerow(csv_row)
+        pd.read_html(fp_base_url.format(position))[0].to_csv('./csv/' + position + '_fp.csv', index=False)
 
 def main():
     print('--- (1/5) Retrieving data from Fantasy Pros ---')
@@ -55,7 +41,7 @@ def main():
 
     # setup a dataframe with Yahoo DFS data and write to json
     print('--- (3/5) Processing Yahoo data ---')
-    yh_df = pandas.DataFrame(text['players']['result'])
+    yh_df = pd.DataFrame(text['players']['result'])
     yh_df = yh_df[yh_df.gameStartTime.str.startswith('Sun')] # for simplicity, only consider the main Sunday DFS contests
     yh_df.drop(['sport', 'playerCode', 'gameCode', 'homeTeam', 'awayTeam', 'gameStartTime'], axis=1, inplace=True)
     yh_df['name'] = yh_df['name'].str.strip()
@@ -68,7 +54,7 @@ def main():
 
     # setup a dataframe with Fantasy Pros positional data
     print('--- (4/5) Processing Fantasy Pros data ---')
-    fp_df = pandas.concat(map(pandas.read_csv, glob.glob(os.path.join('', './csv/*_fp.csv'))), sort=False)
+    fp_df = pd.concat(map(pd.read_csv, glob.glob(os.path.join('', './csv/*_fp.csv'))), sort=False)
     fp_df = fp_df[['Player', 'FPTS']]
     fp_df.columns = ['name', 'points']
     fp_df['name'] = fp_df['name'].str.strip()
@@ -110,7 +96,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-

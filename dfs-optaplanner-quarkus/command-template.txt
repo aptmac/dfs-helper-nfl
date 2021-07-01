@@ -1,3 +1,0 @@
-curl -X POST -H "Content-Type: application/json" \
-    -d @json/fantasypros.json \
-    http://localhost:8080/dfs/solve

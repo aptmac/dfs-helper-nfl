@@ -28,6 +28,12 @@ Projected points: 130.9
 
 ## Does it work?
 
+### Post 2020 season thoughts ..
+
+After using this for the remainder of the 2020 season, yes it works. As I mentioned below back in November 2020 I noticed that the Yahoo projected points were terrible, and that trend continued. The Fantasy Pros projected scores however were quite good, and I ran their projections into the solver without modifications for the rest of the season. I ended up winning ~70% of the contests I entered, which was actually enough to be Diamond rank (top 5%) on Yahoo DFS.
+
+### Mid 2020 season (November) thoughts..
+
 Yeah, kind of.
 
 The Yahoo projected points are hot garbage, so I wouldn't advice using them.
