@@ -10,14 +10,14 @@ import pandas as pd
 import re
 
 # Fantasy Pros player names include the abbreviation of their team; it needs to be removed
-def strip_team_abb(player):
+def strip_team_abb(name):
     # For some reason Patrick Mahomes has "II" in FP but not Yahoo, and they must be the same for merging dataframes
     # if player == "Patrick Mahomes II KC":
     #     return "Patrick Mahomes"
-    name = re.findall('(.*)\s[A-Z]{2,3}', player)
-    if name:
-        return name[0]
-    return player
+    player = re.findall('(.*)\s[A-Z]{2,3}', name)
+    if player:
+        return player[0]
+    return name # this will be a DST
 
 # Download all the positional data from Fantasy Pros
 def download_fp_csv():
@@ -25,15 +25,23 @@ def download_fp_csv():
     if not os.path.exists('./csv'):
         os.makedirs('./csv')
     # Scrape the Fantasy Pros player score predictions and write them to .csv
-    fp_base_url = 'https://www.fantasypros.com/nfl/projections/{}.php?scoring=HALF'
+    fp_base_url = 'https://www.fantasypros.com/nfl/projections/{}.php?&scoring=HALF'
     for position in ['qb', 'wr', 'rb', 'te', 'dst']:
         pd.read_html(fp_base_url.format(position))[0].to_csv('./csv/' + position + '_fp.csv', index=False)
+        if position != 'dst':
+            # FIXME: the new Fantasy Pros table has new column headers that throw a wrench into Pandas,
+            # this hack of simply removing the first line of the .csv works, but is kind of ugly. 
+            # Maybe fix this some day when you're bored ..
+            lines = open('./csv/{}_fp.csv'.format(position)).readlines()
+            with open('./csv/{}_fp.csv'.format(position), 'w') as f:
+                f.writelines(lines[1:])
+            f.close()
 
 def main():
     print('--- (1/5) Retrieving data from Fantasy Pros ---')
     download_fp_csv()
 
-    # retrieve the Yahoo DFS information from API
+    # # retrieve the Yahoo DFS information from API
     print('--- (2/5) Retrieving data from Yahoo API ---')
     url = "https://dfyql-ro.sports.yahoo.com/v2/external/playersFeed/nfl"
     jsonurl = urlopen(url)
@@ -72,8 +80,8 @@ def main():
     merged.to_csv('./csv/fantasypros.csv', encoding='utf-8', index=True)
     merged.to_json('./json/fantasypros.json', orient='table')
 
-    # format the json files to comply nicely with Optaplanner
-    print('--- (5/5) Cleaning up JSON files for OptaPlanner use ---')
+    # format the json files to comply nicely with external tooling
+    print('--- (5/5) Cleaning up JSON files for external use ---')
     for format in ['yahoo', 'fantasypros']:
         f = open('./json/' + format + '.json', 'r')
         data = json.load(f)
