@@ -3,11 +3,16 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import csv
+import io
 import glob, os
 import json
 import numpy as np
 import pandas as pd
 import re
+
+FP_BASE_URL = 'https://www.fantasypros.com/nfl/projections/{}.php?&scoring=HALF'
+MAX_SALARY = 200
+GAME_DAY = 'Sun'
 
 # Fantasy Pros player names include the abbreviation of their team; it needs to be removed
 def strip_team_abb(name):
@@ -19,38 +24,32 @@ def strip_team_abb(name):
         return player[0]
     return name # this will be a DST
 
-# Download all the positional data from Fantasy Pros
-def download_fp_csv():
-    # Make sure there's a csv folder to store all the data in
-    if not os.path.exists('./csv'):
-        os.makedirs('./csv')
-    # Scrape the Fantasy Pros player score predictions and write them to .csv
-    fp_base_url = 'https://www.fantasypros.com/nfl/projections/{}.php?&scoring=HALF'
+# Fetch all positional data from FP, return a DataFrame containing all the data for the week
+def fetch_fp_data():
+    dfs = []
     for position in ['qb', 'wr', 'rb', 'te', 'dst']:
-        pd.read_html(fp_base_url.format(position))[0].to_csv('./csv/' + position + '_fp.csv', index=False)
+        df = pd.read_html(FP_BASE_URL.format(position))[0]
         if position != 'dst':
-            # FIXME: the new Fantasy Pros table has new column headers that throw a wrench into Pandas,
-            # this hack of simply removing the first line of the .csv works, but is kind of ugly. 
-            # Maybe fix this some day when you're bored ..
-            lines = open('./csv/{}_fp.csv'.format(position)).readlines()
-            with open('./csv/{}_fp.csv'.format(position), 'w') as f:
-                f.writelines(lines[1:])
-            f.close()
+            # The new Fantasy Pros table (2021) has new column headers that throw a wrench into Pandas,
+            # this hack of simply removing the first line of the .csv works, but is kind of ugly.
+            csv = df.to_csv(index=False)
+            csv = csv[csv.find('\n')+1:csv.rfind('\n')]
+            buffer = io.StringIO(csv)
+            df = pd.read_csv(buffer)
+        dfs.append(df)
+    return pd.concat(dfs, ignore_index=True, sort=False)
 
 def main():
-    print('--- (1/5) Retrieving data from Fantasy Pros ---')
-    download_fp_csv()
-
     # # retrieve the Yahoo DFS information from API
-    print('--- (2/5) Retrieving data from Yahoo API ---')
+    print('--- (1/4) Retrieving data from Yahoo API ---')
     url = "https://dfyql-ro.sports.yahoo.com/v2/external/playersFeed/nfl"
     jsonurl = urlopen(url)
     text = json.loads(jsonurl.read())
 
     # setup a dataframe with Yahoo DFS data and write to json
-    print('--- (3/5) Processing Yahoo data ---')
+    print('--- (2/4) Processing Yahoo data ---')
     yh_df = pd.DataFrame(text['players']['result'])
-    yh_df = yh_df[yh_df.gameStartTime.str.startswith('Sun')] # for simplicity, only consider the main Sunday DFS contests
+    yh_df = yh_df[yh_df.gameStartTime.str.startswith(GAME_DAY)]
     yh_df.drop(['sport', 'playerCode', 'gameCode', 'homeTeam', 'awayTeam', 'gameStartTime'], axis=1, inplace=True)
     yh_df['name'] = yh_df['name'].str.strip()
     yh_df.rename(columns = {'fppg':'yahoo'}, inplace=True)
@@ -61,8 +60,8 @@ def main():
     yh_df.rename(columns = {'yahoo':'points'}).to_json('./json/yahoo.json', orient='table')
 
     # setup a dataframe with Fantasy Pros positional data
-    print('--- (4/5) Processing Fantasy Pros data ---')
-    fp_df = pd.concat(map(pd.read_csv, glob.glob(os.path.join('', './csv/*_fp.csv'))), sort=False)
+    print('--- (3/4) Fetching the Fantasy Pros data ---')
+    fp_df = fetch_fp_data()
     fp_df = fp_df[['Player', 'FPTS']]
     fp_df.columns = ['name', 'points']
     fp_df['name'] = fp_df['name'].str.strip()
@@ -81,7 +80,7 @@ def main():
     merged.to_json('./json/fantasypros.json', orient='table')
 
     # format the json files to comply nicely with external tooling
-    print('--- (5/5) Cleaning up JSON files for external use ---')
+    print('--- (4/4) Cleaning up JSON files for external use ---')
     for format in ['yahoo', 'fantasypros']:
         f = open('./json/' + format + '.json', 'r')
         data = json.load(f)
@@ -91,7 +90,7 @@ def main():
         del data['schema']
 
         # add a "roster" section with details about the roster requirements
-        data['roster'] = {'maxSalary' : 200}
+        data['roster'] = {'maxSalary' : MAX_SALARY}
 
         # change the "data" attribute name to "players"
         data['players'] = data.pop('data')
