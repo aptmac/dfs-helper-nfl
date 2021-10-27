@@ -54,6 +54,8 @@ def main():
     yh_df['name'] = yh_df['name'].str.strip()
     yh_df.rename(columns = {'fppg':'yahoo'}, inplace=True)
     yh_df.sort_values(by=['salary'], ascending=False, inplace=True)
+    if not os.path.exists('./csv'):
+        os.makedirs('./csv')
     yh_df.rename(columns = {'yahoo':'points'}).to_csv('./csv/yahoo.csv', encoding='utf-8', index=True)
     if not os.path.exists('./json'):
         os.makedirs('./json')
