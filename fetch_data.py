@@ -2,11 +2,9 @@
 
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
-import csv
 import io
-import glob, os
+import os
 import json
-import numpy as np
 import pandas as pd
 import re
 
