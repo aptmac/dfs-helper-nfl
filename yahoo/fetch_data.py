@@ -1,12 +1,8 @@
 #!/usr/bin/python3
 
-from bs4 import BeautifulSoup
 from urllib.request import urlopen
-import io
-import os
-import json
+import io, json, os, re
 import pandas as pd
-import re
 
 FP_BASE_URL = 'https://www.fantasypros.com/nfl/projections/{}.php?&scoring=HALF'
 MAX_SALARY = 200

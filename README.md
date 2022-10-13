@@ -4,6 +4,8 @@
 
 This repository contains a couple of Python scripts that automate the creation of daily fantasy football rosters.
 
+Currently supports Yahoo main slate matches and OwnersBox Thursday -> Monday games.
+
 ## How to use:
 
 `> python fetch_data.py`
@@ -25,3 +27,20 @@ This repository contains a couple of Python scripts that automate the creation o
 Total used amount of salary cap: 200.0
 Projected points: 130.9
 ```
+
+## Past Achievements
+### 2021
+
+![2021](https://user-images.githubusercontent.com/10425301/195481619-48b12822-7c6a-4bd4-a84a-4b0e32d80f1d.png)
+
+Yahoo Diamond Rank (top 1%)
+
+Placed 504/223186 in the 2021 Yahoo cup.
+
+### 2020
+
+![2020](https://user-images.githubusercontent.com/10425301/124058137-c974f680-d9f6-11eb-9a15-3876a86e101e.png)
+
+Yahoo Diamond Rank (top 5%)
+
+Placed 972/142,492 in the BetMGM 2020 Yahoo Cup

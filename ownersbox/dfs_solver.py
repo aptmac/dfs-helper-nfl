@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 
-import numpy as np
 import pandas as pd
 import pulp
-from pulp import lpSum
 import sys
 
 print('--- (1/4) Defining the problem ---')
@@ -15,7 +13,6 @@ players["QB"] = (players["position"] == "QB").astype(float)
 players["RB"] = (players["position"] == "RB").astype(float)
 players["WR"] = (players["position"] == "WR").astype(float)
 players["TE"] = (players["position"] == "TE").astype(float)
-players["DST"] = (players["position"] == "DEF").astype(float)
 players["salary"] = players["salary"].astype(float)
 
 model = pulp.LpProblem("DFS", pulp.LpMaximize)
@@ -43,28 +40,29 @@ for i, player in players.iterrows():
     rb[decision_var] = player["RB"]
     wr[decision_var] = player["WR"]
     te[decision_var] = player["TE"]
-    dst[decision_var] = player["DST"]
     num_players[decision_var] = 1.0
 
 objective_function = pulp.LpAffineExpression(total_points)
 model += objective_function
 
 total_cost = pulp.LpAffineExpression(cost)
-model += (total_cost <= 200)
+model += (total_cost <= 50000)
 
 print('--- (2/4) Defining the constraints ---')
 QB_constraint = pulp.LpAffineExpression(qb)
 RB_constraint = pulp.LpAffineExpression(rb)
 WR_constraint = pulp.LpAffineExpression(wr)
 TE_constraint = pulp.LpAffineExpression(te)
-DST_constraint = pulp.LpAffineExpression(dst)
 total_players = pulp.LpAffineExpression(num_players)
 
-model += (QB_constraint == 1)
-model += (RB_constraint <= 3)
+# 1QB, 2RB, 2WR, 1TE, 2 Flex, 1 SuperFlex
+model += (QB_constraint <= 2)
+model += (RB_constraint <= 4) # Can have up to 4
+model += (RB_constraint >= 2) # ..but must have 2
 model += (WR_constraint <= 4)
-model += (TE_constraint == 1)
-model += (DST_constraint == 1)
+model += (WR_constraint >= 2)
+model += (TE_constraint <= 3)
+model += (TE_constraint >= 1)
 model += (total_players == 9)
 
 print('--- (3/4) Solving the problem ---')
@@ -74,7 +72,7 @@ print('--- (4/4) Formatting the results ---')
 players["is_drafted"] = 0.0
 
 for var in model.variables():
-    players.iloc[int(var.name[1:]), 10] = var.varValue 
+    players.iloc[int(var.name[1:]), players.columns.get_loc('is_drafted')] = var.varValue
 
 my_team = players[players["is_drafted"] == 1.0]
 my_team = my_team[["name", "position", "team", "salary", "points"]]
