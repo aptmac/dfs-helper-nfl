@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
+from datetime import datetime
 import pandas as pd
-import pulp
-import sys
+import os, pulp, sys
 
 print('--- (1/4) Defining the problem ---')
 players = pd.read_csv(sys.argv[1])
@@ -80,4 +80,8 @@ my_team = my_team[["name", "position", "team", "salary", "points"]]
 print(my_team)
 print("Total used amount of salary cap: {}".format(my_team["salary"].sum()))
 print("Projected points: {}".format(my_team["points"].sum().round(1)))
+
+if not os.path.exists('./results'):
+    os.makedirs('./results')
+my_team.to_json('./results/' + datetime.now().strftime("%d-%m-%Y-%Hh%Mm%Ss") + '.json', indent=2, orient='table')
 print('--- Completed ---')
