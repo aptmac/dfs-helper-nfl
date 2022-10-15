@@ -119,14 +119,15 @@ def setup_yahoo_df():
 
 def main():
     df = []
-    format = ''
+    format = 'yahoo'
     if len(sys.argv) == 2:
         if sys.argv[1] == '--ownersbox' or sys.argv[1] == '-o':
             format = 'ownersbox'
             df = setup_rotowire_df(format)
-        else: # default to Yahoo DFS
-            format = 'yahoo'
+        elif sys.argv[1] == '--yahoo' or sys.argv[1] == '-y':
             df = setup_yahoo_df()
+    else: # default to Yahoo DFS
+        df = setup_yahoo_df()
     fp_df = setup_fp_df()
     merged = merge_df(df, fp_df)
     write_data(merged, format)
