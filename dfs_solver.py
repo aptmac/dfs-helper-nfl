@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from datetime import datetime
+from pathlib import Path
 import pandas as pd
 import os, pulp, sys
 
@@ -101,6 +102,9 @@ def write_results_to_json(results, format):
 def main():
     # At the moment, default to Yahoo and opt-in to OwnersBox by using args
     format = 'yahoo'
+    if len(sys.argv) == 2:
+        if Path(sys.argv[1]).stem == 'ownersbox':
+            format = 'ownersbox'
     if len(sys.argv) == 3: 
         if sys.argv[2] == '--ownersbox' or sys.argv[2] == '-o':
             format = 'ownersbox'

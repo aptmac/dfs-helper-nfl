@@ -22,7 +22,7 @@ def fetch_yahoo_data():
 def write_data(data, format):
     if not os.path.exists('./rawdata'):
         os.makedirs('./rawdata')
-    data.to_csv('./rawdata/' + format + '-' + datetime.now().strftime("%d-%m-%Y-%Hh%Mm%Ss") + '.csv', encoding='utf-8', index=True)
+    data.to_csv('./rawdata/' + format + '.csv', encoding='utf-8', index=True)
 
 # Fetch all positional data from FP, return a DataFrame containing all the data for the week
 def fetch_fp_data():
@@ -111,9 +111,8 @@ def setup_yahoo_df():
 
     df = pd.DataFrame(text['players']['result'])
     df = df[df.gameStartTime.str.startswith('Sun')]
-    df.drop(['sport', 'playerCode', 'gameCode', 'homeTeam', 'awayTeam', 'gameStartTime'], axis=1, inplace=True)
+    df.drop(['sport', 'playerCode', 'gameCode', 'homeTeam', 'awayTeam', 'gameStartTime', 'fppg'], axis=1, inplace=True)
     df['name'] = df['name'].str.strip()
-    df.rename(columns = {'fppg':'yahoo'}, inplace=True)
     df.sort_values(by=['salary'], ascending=False, inplace=True)
     return df
 
